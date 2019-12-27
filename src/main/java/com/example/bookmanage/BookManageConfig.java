@@ -8,12 +8,18 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.filter.HiddenHttpMethodFilter;
 
 /**
- * @author hri
+ * 書籍管理システムのConfiguration
  *
+ * PUT/DELETEをPOSTするためにHiddenHttpMehotdFilterをFilterとして設定する。
  */
 @Configuration
 public class BookManageConfig {
 
+    /**
+     * HiddenHttpMehotdFilterをFilterに設定するためのBeanを返却する。
+     *
+     * @return HiddenHttpMehotdFilterをFilterに設定するためのBean
+     */
     @Bean
     public FilterRegistrationBean<HiddenHttpMethodFilter> hiddenHttpMethodFilter() {
         HiddenHttpMethodFilter filter = new HiddenHttpMethodFilter();

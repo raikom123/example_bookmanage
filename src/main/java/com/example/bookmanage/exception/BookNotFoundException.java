@@ -3,7 +3,7 @@ package com.example.bookmanage.exception;
 import lombok.Getter;
 
 /**
- * 
+ * 書籍が存在しない場合の例外処理
  */
 @SuppressWarnings("serial")
 @Getter

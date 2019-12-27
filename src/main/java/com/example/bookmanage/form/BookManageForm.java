@@ -8,6 +8,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * 書籍管理システムの画面のフォーム情報
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
