@@ -1,18 +1,15 @@
 package com.example.bookmanage.exception;
 
-import lombok.Getter;
-
 /**
  * 書籍が存在しない場合の例外処理
  */
 @SuppressWarnings("serial")
-@Getter
-public class BookNotFoundException extends RuntimeException {
+public class BookNotFoundException extends Exception {
 
     /**
-     * 書籍のID
+     * メッセージのフォーマット
      */
-    private long id;
+    private static final String MESSAGE_FORMAT = "Book is not found. (id = %d)";
 
     /**
      * コンストラクタ
@@ -20,7 +17,7 @@ public class BookNotFoundException extends RuntimeException {
      * @param id 書籍のID
      */
     public BookNotFoundException(long id) {
-        this.id = id;
+        super(String.format(MESSAGE_FORMAT, id));
     }
 
 }

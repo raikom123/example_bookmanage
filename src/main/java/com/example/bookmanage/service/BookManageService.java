@@ -52,9 +52,10 @@ public class BookManageService {
      *
      * @param id 書籍のID
      * @return フォーム情報
+     * @throws BookNotFoundException 書籍が取得できない場合に発生する
      */
     @Transactional(readOnly = true)
-    public BookManageForm readOneBook(long id) {
+    public BookManageForm readOneBook(long id) throws BookNotFoundException {
         // IDでエンティティを取得する
         Book book = bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
 
@@ -74,9 +75,10 @@ public class BookManageService {
      *
      * @param id 書籍のID
      * @param form フォーム情報
+     * @throws BookNotFoundException 書籍が取得できない場合に発生する
      */
     @Transactional(readOnly = false)
-    public void updateBook(long id, BookManageForm form) {
+    public void updateBook(long id, BookManageForm form) throws BookNotFoundException {
         // IDでエンティティを取得する
         Book book = bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
 
@@ -112,9 +114,10 @@ public class BookManageService {
      * 指定したIDに該当する書籍を削除する。
      *
      * @param id 書籍のID
+     * @throws BookNotFoundException 書籍が取得できない場合に発生する
      */
     @Transactional(readOnly = false)
-    public void deleteBook(long id) {
+    public void deleteBook(long id) throws BookNotFoundException {
         if (bookRepository.existsById(id)) {
             bookRepository.deleteById(id);
         } else {
