@@ -18,25 +18,47 @@ import com.example.bookmanage.service.BookManageService;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 書籍管理システムのMVCコントローラ
+ */
 @Slf4j
 @Controller
 public class BookManageController {
 
-    static final String BOOKS = "books";
+    /**
+     * 書籍管理システムのビュー名
+     */
+    private static final String BOOKS = "books";
 
+    /**
+     * リダイレクトのURL
+     */
     private static final String REDIRECT_TO = "redirect:/" + BOOKS;
 
+    /**
+     * 書籍管理システムのサービス
+     */
     private BookManageService service;
 
+    /**
+     * コンストラクタ
+     * 
+     * @param service 書籍管理システムのサービス
+     */
     @Autowired
     public BookManageController(BookManageService service) {
         this.service = service;
     }
 
+    /**
+     * 書籍一覧を読み込む。
+     * 
+     * @return モデルビュー
+     */
     @GetMapping(value = "/books")
     public ModelAndView readBooks() {
-        BookManageForm form = service.initBooks();
-        ModelAndView modelAndView = toTaskPages();
+        BookManageForm form = service.initForm();
+        ModelAndView modelAndView = toBookPages();
         modelAndView.addObject("form", form);
         return modelAndView;
     }
@@ -46,36 +68,60 @@ public class BookManageController {
      * 
      * @return return ビュー名を設定したモデルビュー
      */
-    private ModelAndView toTaskPages() {
+    private ModelAndView toBookPages() {
         return new ModelAndView(BOOKS);
     }
 
+    /**
+     * 指定したIDに該当する書籍を読み込む。
+     *
+     * @param id 書籍のID
+     * @return モデルビュー
+     * @throws Throwable ビジネス例外以外の例外が発生した場合、throwされる
+     */
     @GetMapping(value = "/books/{id}")
-    public ModelAndView readOneBook(@PathVariable long id) throws Exception {
-        ModelAndView modelAndView = toTaskPages();
+    public ModelAndView readOneBook(@PathVariable long id) throws Throwable {
+        ModelAndView modelAndView = toBookPages();
         try {
             BookManageForm form = service.readOneBook(id);
             modelAndView.addObject("bookId", id);
             modelAndView.addObject("form", form);
             return modelAndView;
-        } catch (Exception e) {
-            BookManageForm form = new BookManageForm();
-            return handleException(form, e);
+        } catch (Throwable t) {
+            return handleException(t);
         }
     }
 
+    /**
+     * フォーム情報から書籍を新規登録する。
+     *
+     * @param form フォーム情報
+     * @param result Validatorの結果
+     * @return モデルビュー
+     * @throws Throwable ビジネス例外以外の例外が発生した場合、throwされる
+     */
     @PostMapping(value = "/books")
-    public ModelAndView createOneBook(@ModelAttribute BookManageForm form, BindingResult result) throws Exception {
+    public ModelAndView createOneBook(@ModelAttribute BookManageForm form, BindingResult result) throws Throwable {
         try {
             service.createBook(form);
-        } catch (Exception e) {
-            return handleException(form, e);
+        } catch (Throwable t) {
+            return handleException(form, t);
         }
         return new ModelAndView(REDIRECT_TO);
     }
 
+    /**
+     * 指定したIDの書籍をフォーム情報の内容に更新する。
+     *
+     * @param id 書籍のID
+     * @param form フォーム情報
+     * @param result Validatorの結果
+     * @return モデルビュー
+     * @throws Throwable ビジネス例外以外の例外が発生した場合、throwされる
+     */
     @PutMapping(value = "/books/{id}")
-    public ModelAndView updateOneBook(@PathVariable long id, @ModelAttribute BookManageForm form, BindingResult result) throws Exception {
+    public ModelAndView updateOneBook(@PathVariable long id, @ModelAttribute BookManageForm form, BindingResult result)
+            throws Throwable {
         try {
             service.updateBook(id, form);
         } catch (Exception e) {
@@ -86,36 +132,73 @@ public class BookManageController {
         return new ModelAndView(REDIRECT_TO);
     }
 
+    /**
+     * 指定したIDの書籍を削除する。
+     *
+     * @param id 書籍のID
+     * @return モデルビュー
+     * @throws Throwable ビジネス例外以外の例外が発生した場合、throwされる
+     */
     @DeleteMapping(value = "/books/{id}")
-    public ModelAndView deleteOneBook(@PathVariable long id) throws Exception {
+    public ModelAndView deleteOneBook(@PathVariable long id) throws Throwable {
         try {
             service.deleteBook(id);
-        } catch (Exception e) {
-            BookManageForm form = new BookManageForm();
-            return handleException(form, e);
+        } catch (Throwable t) {
+            return handleException(t);
         }
         return new ModelAndView(REDIRECT_TO);
     }
-    
-    private ModelAndView handleException(BookManageForm form, Exception e) throws Exception {
-        if (e instanceof BookNotFoundException) {
-            log.warn("データが存在しないエラー", e);
-            // 書籍が取得出来ない場合
-            return handleException(form, "書籍が存在しません。");
-        } else if (e instanceof ObjectOptimisticLockingFailureException) {
-            log.warn("楽観排他エラー", e);
-            // 楽観排他でエラーが発生した場合
-            return handleException(form, "他のユーザによって書籍が更新されました。");
-        }
-        
-        throw e;
+
+    /**
+     * 例外を処理する。<br />
+     * ビジネス例外の場合、エラーメッセージを設定したモデルビューを返却する。
+     *
+     * @param t 例外
+     * @return モデルビュー
+     * @throws Throwable ビジネス例外以外の例外が発生した場合、throwされる
+     */
+    private ModelAndView handleException(Throwable t) throws Throwable {
+        BookManageForm form = new BookManageForm();
+        form.setNewBook(true);
+        return handleException(form, t);
     }
-    
-    private ModelAndView handleException(BookManageForm form, String errorMessage) {
-        // 一覧を取得し直す
-        BookManageForm initForm = service.initBooks();
+
+    /**
+     * 例外を処理する。<br />
+     * ビジネス例外の場合、エラーメッセージを設定したモデルビューを返却する。
+     *
+     * @param form フォーム情報
+     * @param t 例外
+     * @return モデルビュー
+     * @throws Throwable ビジネス例外以外の例外が発生した場合、throwされる
+     */
+    private ModelAndView handleException(BookManageForm form, Throwable t) throws Throwable {
+        if (t instanceof BookNotFoundException) {
+            log.warn("データが存在しないエラー", t);
+            // 書籍が取得出来ない場合
+            return toBookPageForError(form, "書籍が存在しません。");
+        } else if (t instanceof ObjectOptimisticLockingFailureException) {
+            log.warn("楽観排他エラー", t);
+            // 楽観排他でエラーが発生した場合
+            return toBookPageForError(form, "他のユーザによって書籍が更新されました。");
+        }
+
+        throw t;
+    }
+
+    /**
+     * エラーメッセージを設定したモデルビューを返却する。<br />
+     * 書籍一覧の設定も行う。
+     *
+     * @param form フォーム情報
+     * @param errorMessage エラーメッセージ
+     * @return モデルビュー
+     */
+    private ModelAndView toBookPageForError(BookManageForm form, String errorMessage) {
+        // 書籍一覧を取得し直す
+        BookManageForm initForm = service.initForm();
         form.setBooks(initForm.getBooks());
-        ModelAndView modelAndView = toTaskPages();
+        ModelAndView modelAndView = toBookPages();
         modelAndView.addObject("form", form);
         modelAndView.addObject("message", errorMessage);
         return modelAndView;
