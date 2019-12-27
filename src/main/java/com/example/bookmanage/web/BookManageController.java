@@ -174,13 +174,15 @@ public class BookManageController {
      */
     private ModelAndView handleException(BookManageForm form, Throwable t) throws Throwable {
         if (t instanceof BookNotFoundException) {
-            log.warn("データが存在しないエラー", t);
             // 書籍が取得出来ない場合
-            return toBookPageForError(form, "書籍が存在しません。");
+            String message = "書籍が存在しません。";
+            log.warn(message, t);
+            return toBookPageForError(form, message);
         } else if (t instanceof ObjectOptimisticLockingFailureException) {
-            log.warn("楽観排他エラー", t);
             // 楽観排他でエラーが発生した場合
-            return toBookPageForError(form, "他のユーザによって書籍が更新されました。");
+            String message = "他のユーザによって書籍が更新されました。";
+            log.warn(message, t);
+            return toBookPageForError(form, message);
         }
 
         throw t;
@@ -200,7 +202,7 @@ public class BookManageController {
         form.setBooks(initForm.getBooks());
         ModelAndView modelAndView = toBookPages();
         modelAndView.addObject("form", form);
-        modelAndView.addObject("message", errorMessage);
+        modelAndView.addObject("errorMessage", errorMessage);
         return modelAndView;
     }
 

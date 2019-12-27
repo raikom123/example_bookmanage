@@ -20,6 +20,10 @@
         <div class="header clearfix">
             <h3 class="text-muted" th:text="#{system.title}">書籍管理システム</h3>
         </div>
+        <div class="alert alert-danger"
+             th:if="${errorMessage}"
+             th:text="${errorMessage}"
+        ></div>
         <div class="jumbotron">
             <h1 th:text="#{label.inputform}">登録フォーム</h1>
             <!-- 新規の場合 -->
