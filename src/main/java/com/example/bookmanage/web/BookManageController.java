@@ -1,6 +1,7 @@
 package com.example.bookmanage.web;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -41,13 +42,19 @@ public class BookManageController {
     private BookManageService service;
 
     /**
+     * メッセージソース
+     */
+    private MessageSource messageSource;
+
+    /**
      * コンストラクタ
      * 
      * @param service 書籍管理システムのサービス
      */
     @Autowired
-    public BookManageController(BookManageService service) {
+    public BookManageController(BookManageService service, MessageSource messageSource) {
         this.service = service;
+        this.messageSource = messageSource;
     }
 
     /**
@@ -175,12 +182,12 @@ public class BookManageController {
     private ModelAndView handleException(BookManageForm form, Throwable t) throws Throwable {
         if (t instanceof BookNotFoundException) {
             // 書籍が取得出来ない場合
-            String message = "書籍が存在しません。";
+            String message = messageSource.getMessage("error.booknotfound", null, null);
             log.warn(message, t);
             return toBookPageForError(form, message);
         } else if (t instanceof ObjectOptimisticLockingFailureException) {
             // 楽観排他でエラーが発生した場合
-            String message = "他のユーザによって書籍が更新されました。";
+            String message = messageSource.getMessage("error.optlockfailure", null, null);
             log.warn(message, t);
             return toBookPageForError(form, message);
         }
