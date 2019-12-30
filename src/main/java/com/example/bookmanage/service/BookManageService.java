@@ -75,10 +75,11 @@ public class BookManageService {
      *
      * @param id 書籍のID
      * @param form フォーム情報
+     * @return 更新後の書籍
      * @throws BookNotFoundException 書籍が取得できない場合に発生する
      */
     @Transactional(readOnly = false)
-    public void updateBook(long id, BookManageForm form) throws BookNotFoundException {
+    public Book updateBook(long id, BookManageForm form) throws BookNotFoundException {
         // IDでエンティティを取得する
         Book book = bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
 
@@ -92,22 +93,23 @@ public class BookManageService {
         modelMapper.map(form, book);
 
         // エンティティの更新
-        bookRepository.save(book);
+        return bookRepository.save(book);
     }
 
     /**
      * フォーム情報から書籍を新規作成する
      * 
      * @param form フォーム情報
+     * @return 新規作成した書籍
      */
     @Transactional(readOnly = false)
-    public void createBook(BookManageForm form) {
+    public Book createBook(BookManageForm form) {
         // フォーム情報を使って、エンティティを生成する
         ModelMapper modelMapper = new ModelMapper();
         Book book = modelMapper.map(form, Book.class);
 
         // エンティティを登録する
-        bookRepository.save(book);
+        return bookRepository.save(book);
     }
 
     /**
