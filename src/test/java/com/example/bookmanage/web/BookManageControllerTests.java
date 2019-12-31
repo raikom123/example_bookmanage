@@ -1,6 +1,8 @@
 package com.example.bookmanage.web;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
@@ -18,6 +20,8 @@ import org.springframework.context.MessageSource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import com.example.bookmanage.BookmanageApplication;
@@ -48,9 +52,19 @@ public class BookManageControllerTests {
     private static final String TEST_TITLE = "書籍のタイトル";
 
     /**
+     * テストデータのタイトル(エラー)
+     */
+    private static final String TEST_TITLE_ERROR = "書籍のタイトル(エラー)";
+
+    /**
      * テストデータの著者名
      */
     private static final String TEST_AUTHOR = "書籍の著者名";
+
+    /**
+     * テストデータの著者名(エラー)
+     */
+    private static final String TEST_AUTHOR_ERROR = "書籍の著者名(エラー)";
 
     /**
      * テストデータのバージョン
@@ -120,7 +134,7 @@ public class BookManageControllerTests {
      * @throws Exception MockMvcのメソッド呼び出し時に発生する
      */
     @Test
-    public void books処理でデータが登録されていない時のステータスとビューとモデルの確認() throws Exception {
+    public void readBooks_データが登録されていない時のステータスとビューとモデルの確認() throws Exception {
         // モックを登録
         BookManageForm initForm = BookManageForm.builder()
                 .newBook(true)
@@ -153,7 +167,7 @@ public class BookManageControllerTests {
      * @throws Exception MockMvcのメソッド呼び出し時に発生する
      */
     @Test
-    public void books処理でデータが1件登録されている時のステータスとビューとモデルの確認() throws Exception {
+    public void readBooks_データが1件登録されている時のステータスとビューとモデルの確認() throws Exception {
         // モックを登録
         BookManageForm initForm = BookManageForm.builder()
                 .newBook(true)
@@ -185,7 +199,7 @@ public class BookManageControllerTests {
      * @throws Exception MockMvcのメソッド呼び出し時に発生する
      */
     @Test
-    public void books_id処理で存在するidを指定した時のステータスとビューとモデルの確認() throws Exception {
+    public void readOneBook_データが存在するidを指定した時のステータスとビューとモデルの確認() throws Exception {
         // モックを登録
         BookManageForm readOneForm = BookManageForm.builder()
                 .title(TEST_TITLE)
@@ -224,7 +238,7 @@ public class BookManageControllerTests {
      * @throws Exception MockMvcのメソッド呼び出し時に発生する
      */
     @Test
-    public void books_id処理で存在しないidを指定した時のステータスとビューとモデルの確認() throws Exception {
+    public void readOneBook_データが存在しないidを指定した時のステータスとビューとモデルの確認() throws Exception {
         String actualMessage = messageSource.getMessage("error.booknotfound", null, null);
 
         // モックを登録
@@ -238,6 +252,199 @@ public class BookManageControllerTests {
 
         // getリクエストでbooks/{id}を指定する
         MvcResult result = mockMvc.perform(get("/books/2")).andDo(print())
+                .andExpect(status().isOk()) // HTTPステータスが200か否か
+                .andExpect(view().name("books")) // ビュー名が"books"か否か
+                .andReturn();
+
+        // モデルからformを取得する
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+
+        // 変数を評価する
+        assertNull(form.getTitle());
+        assertNull(form.getAuthor());
+        assertEquals(form.isNewBook(), true);
+        assertEquals(form.getVersion(), 0);
+        assertNotNull(form.getBooks());
+        assertEquals(form.getBooks().size(), 1);
+
+        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        String message = (String) result.getModelAndView().getModel().get("errorMessage");
+        assertEquals(message, actualMessage);
+    }
+
+    @Test
+    public void createOneBook_正常に新規登録した場合のステータスとリダイレクトURLの確認() throws Exception {
+        // テストデータ作成
+        BookManageForm inputForm = BookManageForm.builder()
+                .title(TEST_TITLE)
+                .author(TEST_AUTHOR)
+                .newBook(true)
+                .version(0)
+                .build();
+
+        // モックを登録
+        when(service.createBook(inputForm)).thenReturn(testBook);
+
+        // postリクエストでbooksを指定する
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("title", inputForm.getTitle());
+        params.add("author", inputForm.getAuthor());
+        params.add("newBook", String.valueOf(inputForm.isNewBook()));
+        params.add("version", String.valueOf(inputForm.getVersion()));
+        mockMvc.perform(post("/books").params(params))
+                .andDo(print())
+                .andExpect(status().is3xxRedirection()) // HTTPステータスが3xxか否か(リダイレクト)
+                .andExpect(redirectedUrl("/books")); // /booksにリダイレクトするか否か
+    }
+
+    @Test
+    public void updateOneBook_正常に更新した場合のステータスとリダイレクトURLの確認() throws Exception {
+        // テストデータ作成
+        BookManageForm inputForm = BookManageForm.builder()
+                .title(TEST_TITLE)
+                .author(TEST_AUTHOR)
+                .newBook(false)
+                .version(0)
+                .build();
+
+        // モックを登録
+        when(service.updateBook(TEST_ID, inputForm)).thenReturn(testBook);
+
+        // putリクエストでbooks/{id}を指定する
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("title", inputForm.getTitle());
+        params.add("author", inputForm.getAuthor());
+        params.add("newBook", String.valueOf(inputForm.isNewBook()));
+        params.add("version", String.valueOf(inputForm.getVersion()));
+        mockMvc.perform(put("/books/1").params(params))
+                .andDo(print())
+                .andExpect(status().is3xxRedirection()) // HTTPステータスが3xxか否か(リダイレクト)
+                .andExpect(redirectedUrl("/books")); // /booksにリダイレクトするか否か
+    }
+
+    @Test
+    public void updateOneBook_指定したIDのデータが存在しない場合のステータスとビューとモデルの確認() throws Exception {
+        // テストデータ作成
+        BookManageForm inputForm = BookManageForm.builder()
+                .title(TEST_TITLE_ERROR)
+                .author(TEST_AUTHOR_ERROR)
+                .newBook(false)
+                .version(TEST_VERSION)
+                .build();
+        BookManageForm initForm = BookManageForm.builder()
+                .newBook(true)
+                .books(Arrays.asList(testBook))
+                .build();
+        String actualMessage = messageSource.getMessage("error.booknotfound", null, null);
+
+        // モックを登録
+        when(service.updateBook(INVALID_TEST_ID, inputForm)).thenThrow(new BookNotFoundException(INVALID_TEST_ID));
+        when(service.initForm()).thenReturn(initForm);
+        when(mockMessageSource.getMessage("error.booknotfound", null, null)).thenReturn(actualMessage);
+
+        // putリクエストでbooks/{id}を指定する
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("title", inputForm.getTitle());
+        params.add("author", inputForm.getAuthor());
+        params.add("newBook", String.valueOf(inputForm.isNewBook()));
+        params.add("version", String.valueOf(inputForm.getVersion()));
+        MvcResult result = mockMvc.perform(put("/books/2").params(params))
+                .andDo(print())
+                .andExpect(status().isOk()) // HTTPステータスが200か否か
+                .andExpect(view().name("books")) // ビュー名が"books"か否か
+                .andReturn();
+
+        // モデルからformを取得する
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+
+        // 変数を評価する
+        assertEquals(form.getTitle(), inputForm.getTitle());
+        assertEquals(form.getAuthor(), inputForm.getAuthor());
+        assertEquals(form.isNewBook(), inputForm.isNewBook());
+        assertEquals(form.getVersion(), inputForm.getVersion());
+        assertNotNull(form.getBooks());
+        assertEquals(form.getBooks().size(), 1);
+
+        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        String message = (String) result.getModelAndView().getModel().get("errorMessage");
+        assertEquals(message, actualMessage);
+    }
+
+    @Test
+    public void updateOneBook_バージョンが更新されている場合のステータスとビューとモデルの確認() throws Exception {
+        // テストデータ作成
+        BookManageForm inputForm = BookManageForm.builder()
+                .title(TEST_TITLE_ERROR)
+                .author(TEST_AUTHOR_ERROR)
+                .newBook(false)
+                .version(TEST_VERSION)
+                .build();
+        BookManageForm initForm = BookManageForm.builder()
+                .newBook(true)
+                .books(Arrays.asList(testBook))
+                .build();
+        String actualMessage = messageSource.getMessage("error.optlockfailure", null, null);
+
+        // モックを登録
+        when(service.updateBook(INVALID_TEST_ID, inputForm)).thenThrow(new BookNotFoundException(INVALID_TEST_ID));
+        when(service.initForm()).thenReturn(initForm);
+        when(mockMessageSource.getMessage("error.booknotfound", null, null)).thenReturn(actualMessage);
+
+        // putリクエストでbooks/{id}を指定する
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("title", inputForm.getTitle());
+        params.add("author", inputForm.getAuthor());
+        params.add("newBook", String.valueOf(inputForm.isNewBook()));
+        params.add("version", String.valueOf(inputForm.getVersion()));
+        MvcResult result = mockMvc.perform(put("/books/2").params(params))
+                .andDo(print())
+                .andExpect(status().isOk()) // HTTPステータスが200か否か
+                .andExpect(view().name("books")) // ビュー名が"books"か否か
+                .andReturn();
+
+        // モデルからformを取得する
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+
+        // 変数を評価する
+        assertEquals(form.getTitle(), inputForm.getTitle());
+        assertEquals(form.getAuthor(), inputForm.getAuthor());
+        assertEquals(form.isNewBook(), inputForm.isNewBook());
+        assertEquals(form.getVersion(), inputForm.getVersion());
+        assertNotNull(form.getBooks());
+        assertEquals(form.getBooks().size(), 1);
+
+        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        String message = (String) result.getModelAndView().getModel().get("errorMessage");
+        assertEquals(message, actualMessage);
+    }
+
+    @Test
+    public void deleteOneBook_正常に削除した場合のステータスとリダイレクトURLの確認() throws Exception {
+        // モックを登録
+        doNothing().when(service).deleteBook(TEST_ID);
+
+        // deleteリクエストでbooksを指定する
+        mockMvc.perform(delete("/books/1"))
+                .andDo(print())
+                .andExpect(status().is3xxRedirection()) // HTTPステータスが3xxか否か(リダイレクト)
+                .andExpect(redirectedUrl("/books")); // /booksにリダイレクトするか否か
+    }
+
+    @Test
+    public void deleteOneBook_指定したIDのデータが存在しない場合のステータスとビューとモデルの確認() throws Exception {
+        String actualMessage = messageSource.getMessage("error.booknotfound", null, null);
+
+        // モックを登録
+        doThrow(new BookNotFoundException(INVALID_TEST_ID)).when(service).deleteBook(INVALID_TEST_ID);
+        BookManageForm initForm = BookManageForm.builder()
+                .newBook(true)
+                .books(Arrays.asList(testBook))
+                .build();
+        when(service.initForm()).thenReturn(initForm);
+        when(mockMessageSource.getMessage("error.booknotfound", null, null)).thenReturn(actualMessage);
+
+        // deleteリクエストでbooks/{id}を指定する
+        MvcResult result = mockMvc.perform(delete("/books/2")).andDo(print())
                 .andExpect(status().isOk()) // HTTPステータスが200か否か
                 .andExpect(view().name("books")) // ビュー名が"books"か否か
                 .andReturn();
