@@ -1,9 +1,7 @@
 package com.example.bookmanage.web;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -12,11 +10,13 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.MessageSource;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -73,6 +73,11 @@ public class BookManageControllerTests {
     private static final long TEST_VERSION = 2;
 
     /**
+     * テスト用のメッセージ
+     */
+    private static final String TEST_MESSAGE = "test message";
+
+    /**
      * テストデータの書籍
      */
     private Book testBook;
@@ -94,12 +99,12 @@ public class BookManageControllerTests {
      */
     @Mock
     private MessageSource mockMessageSource;
-    
+
     /**
-     * メッセージソース
+     * メッセージソースのコードを確認するためのCaptor
      */
-    @Autowired
-    private MessageSource messageSource;
+    @Captor
+    private ArgumentCaptor<String> messageCode;
 
     /**
      * Httpリクエスト・レスポンスを扱うためのMockオブジェクト
@@ -240,8 +245,6 @@ public class BookManageControllerTests {
      */
     @Test
     public void readOneBook_データが存在しないidを指定した時のステータスとビューとモデルの確認() throws Exception {
-        String actualMessage = messageSource.getMessage("error.booknotfound", null, null);
-
         // モックを登録
         when(service.readOneBook(INVALID_TEST_ID)).thenThrow(new BookNotFoundException(INVALID_TEST_ID));
         BookManageForm initForm = BookManageForm.builder()
@@ -249,7 +252,7 @@ public class BookManageControllerTests {
                 .books(Arrays.asList(testBook))
                 .build();
         when(service.initForm()).thenReturn(initForm);
-        when(mockMessageSource.getMessage("error.booknotfound", null, null)).thenReturn(actualMessage);
+        when(mockMessageSource.getMessage(any(), any(), any())).thenReturn(TEST_MESSAGE);
 
         // getリクエストでbooks/{id}を指定する
         MvcResult result = mockMvc.perform(get("/books/2")).andDo(print())
@@ -268,9 +271,12 @@ public class BookManageControllerTests {
         assertNotNull(form.getBooks());
         assertEquals(form.getBooks().size(), 1);
 
-        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        // モデルにメッセージが設定されているかを評価する
         String message = (String) result.getModelAndView().getModel().get("errorMessage");
-        assertEquals(message, actualMessage);
+        assertEquals(message, TEST_MESSAGE);
+        // メッセージソースの引数を確認する
+        verify(mockMessageSource).getMessage(messageCode.capture(), any(), any());
+        assertEquals(messageCode.getValue(), "error.booknotfound");
     }
 
     @Test
@@ -310,11 +316,10 @@ public class BookManageControllerTests {
                 .version(0)
                 .books(Arrays.asList())
                 .build();
-        String actualMessage = messageSource.getMessage("error.validation", null, null);
 
         // モックを登録
         when(service.initForm()).thenReturn(initForm);
-        when(mockMessageSource.getMessage("error.validation", null, null)).thenReturn(actualMessage);
+        when(mockMessageSource.getMessage("error.validation", null, null)).thenReturn(TEST_MESSAGE);
 
         // postリクエストでbooksを指定する
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -339,9 +344,12 @@ public class BookManageControllerTests {
         assertNotNull(form.getBooks());
         assertEquals(form.getBooks().size(), 0);
 
-        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        // モデルにメッセージが設定されているかを評価する
         String message = (String) result.getModelAndView().getModel().get("errorMessage");
-        assertEquals(message, actualMessage);
+        assertEquals(message, TEST_MESSAGE);
+        // メッセージソースの引数を確認する
+        verify(mockMessageSource).getMessage(messageCode.capture(), any(), any());
+        assertEquals(messageCode.getValue(), "error.validation");
 
         //MEMO bindingResultの詳細な確認は、BookManageFormTestsで行う
         BindingResult bindingResult = (BindingResult) result.getModelAndView().getModel().get("org.springframework.validation.BindingResult.bookManageForm");
@@ -386,12 +394,11 @@ public class BookManageControllerTests {
                 .newBook(true)
                 .books(Arrays.asList(testBook))
                 .build();
-        String actualMessage = messageSource.getMessage("error.booknotfound", null, null);
 
         // モックを登録
         when(service.updateBook(INVALID_TEST_ID, inputForm)).thenThrow(new BookNotFoundException(INVALID_TEST_ID));
         when(service.initForm()).thenReturn(initForm);
-        when(mockMessageSource.getMessage("error.booknotfound", null, null)).thenReturn(actualMessage);
+        when(mockMessageSource.getMessage("error.booknotfound", null, null)).thenReturn(TEST_MESSAGE);
 
         // putリクエストでbooks/{id}を指定する
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -416,9 +423,12 @@ public class BookManageControllerTests {
         assertNotNull(form.getBooks());
         assertEquals(form.getBooks().size(), 1);
 
-        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        // モデルにメッセージが設定されているかを評価する
         String message = (String) result.getModelAndView().getModel().get("errorMessage");
-        assertEquals(message, actualMessage);
+        assertEquals(message, TEST_MESSAGE);
+        // メッセージソースの引数を確認する
+        verify(mockMessageSource).getMessage(messageCode.capture(), any(), any());
+        assertEquals(messageCode.getValue(), "error.booknotfound");
     }
 
     @Test
@@ -434,12 +444,11 @@ public class BookManageControllerTests {
                 .newBook(true)
                 .books(Arrays.asList(testBook))
                 .build();
-        String actualMessage = messageSource.getMessage("error.optlockfailure", null, null);
 
         // モックを登録
-        when(service.updateBook(INVALID_TEST_ID, inputForm)).thenThrow(new BookNotFoundException(INVALID_TEST_ID));
+        when(service.updateBook(INVALID_TEST_ID, inputForm)).thenThrow(new ObjectOptimisticLockingFailureException(Book.class, INVALID_TEST_ID));
         when(service.initForm()).thenReturn(initForm);
-        when(mockMessageSource.getMessage("error.booknotfound", null, null)).thenReturn(actualMessage);
+        when(mockMessageSource.getMessage(any(), any(), any())).thenReturn(TEST_MESSAGE);
 
         // putリクエストでbooks/{id}を指定する
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -464,9 +473,12 @@ public class BookManageControllerTests {
         assertNotNull(form.getBooks());
         assertEquals(form.getBooks().size(), 1);
 
-        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        // モデルにメッセージが設定されているかを評価する
         String message = (String) result.getModelAndView().getModel().get("errorMessage");
-        assertEquals(message, actualMessage);
+        assertEquals(message, TEST_MESSAGE);
+        // メッセージソースの引数を確認する
+        verify(mockMessageSource).getMessage(messageCode.capture(), any(), any());
+        assertEquals(messageCode.getValue(), "error.optlockfailure");
     }
 
     @Test
@@ -482,11 +494,10 @@ public class BookManageControllerTests {
                 .newBook(true)
                 .books(Arrays.asList(testBook))
                 .build();
-        String actualMessage = messageSource.getMessage("error.validation", null, null);
 
         // モックを登録
         when(service.initForm()).thenReturn(initForm);
-        when(mockMessageSource.getMessage("error.validation", null, null)).thenReturn(actualMessage);
+        when(mockMessageSource.getMessage(any(), any(), any())).thenReturn(TEST_MESSAGE);
 
         // putリクエストでbooks/{id}を指定する
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -511,9 +522,12 @@ public class BookManageControllerTests {
         assertNotNull(form.getBooks());
         assertEquals(form.getBooks().size(), 1);
 
-        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        // モデルにメッセージが設定されているかを評価する
         String message = (String) result.getModelAndView().getModel().get("errorMessage");
-        assertEquals(message, actualMessage);
+        assertEquals(message, TEST_MESSAGE);
+        // メッセージソースの引数を確認する
+        verify(mockMessageSource).getMessage(messageCode.capture(), any(), any());
+        assertEquals(messageCode.getValue(), "error.validation");
 
         //MEMO bindingResultの詳細な確認は、BookManageFormTestsで行う
         BindingResult bindingResult = (BindingResult) result.getModelAndView().getModel().get("org.springframework.validation.BindingResult.bookManageForm");
@@ -534,8 +548,6 @@ public class BookManageControllerTests {
 
     @Test
     public void deleteOneBook_指定したIDのデータが存在しない場合のステータスとビューとモデルの確認() throws Exception {
-        String actualMessage = messageSource.getMessage("error.booknotfound", null, null);
-
         // モックを登録
         doThrow(new BookNotFoundException(INVALID_TEST_ID)).when(service).deleteBook(INVALID_TEST_ID);
         BookManageForm initForm = BookManageForm.builder()
@@ -543,7 +555,7 @@ public class BookManageControllerTests {
                 .books(Arrays.asList(testBook))
                 .build();
         when(service.initForm()).thenReturn(initForm);
-        when(mockMessageSource.getMessage("error.booknotfound", null, null)).thenReturn(actualMessage);
+        when(mockMessageSource.getMessage("error.booknotfound", null, null)).thenReturn(TEST_MESSAGE);
 
         // deleteリクエストでbooks/{id}を指定する
         MvcResult result = mockMvc.perform(delete("/books/2")).andDo(print())
@@ -562,9 +574,12 @@ public class BookManageControllerTests {
         assertNotNull(form.getBooks());
         assertEquals(form.getBooks().size(), 1);
 
-        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        // モデルにメッセージが設定されているかを評価する
         String message = (String) result.getModelAndView().getModel().get("errorMessage");
-        assertEquals(message, actualMessage);
+        assertEquals(message, TEST_MESSAGE);
+        // メッセージソースの引数を確認する
+        verify(mockMessageSource).getMessage(messageCode.capture(), any(), any());
+        assertEquals(messageCode.getValue(), "error.booknotfound");
     }
 
 }
