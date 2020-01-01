@@ -5,6 +5,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.example.bookmanage.exception.BookManageValidationException;
 import com.example.bookmanage.exception.BookNotFoundException;
 import com.example.bookmanage.form.BookManageForm;
 import com.example.bookmanage.service.BookManageService;
@@ -66,7 +68,7 @@ public class BookManageController {
     public ModelAndView readBooks() {
         BookManageForm form = service.initForm();
         ModelAndView modelAndView = toBookPages();
-        modelAndView.addObject("form", form);
+        modelAndView.addObject("bookManageForm", form);
         return modelAndView;
     }
 
@@ -92,7 +94,7 @@ public class BookManageController {
         try {
             BookManageForm form = service.readOneBook(id);
             modelAndView.addObject("bookId", id);
-            modelAndView.addObject("form", form);
+            modelAndView.addObject("bookManageForm", form);
             return modelAndView;
         } catch (Throwable t) {
             return handleException(t);
@@ -108,8 +110,11 @@ public class BookManageController {
      * @throws Throwable ビジネス例外以外の例外が発生した場合、throwされる
      */
     @PostMapping(value = "/books")
-    public ModelAndView createOneBook(@ModelAttribute BookManageForm form, BindingResult result) throws Throwable {
+    public ModelAndView createOneBook(@Validated @ModelAttribute BookManageForm form, BindingResult result)
+            throws Throwable {
         try {
+            validateInputFormData(form, result);
+
             service.createBook(form);
         } catch (Throwable t) {
             return handleException(form, t);
@@ -127,9 +132,11 @@ public class BookManageController {
      * @throws Throwable ビジネス例外以外の例外が発生した場合、throwされる
      */
     @PutMapping(value = "/books/{id}")
-    public ModelAndView updateOneBook(@PathVariable long id, @ModelAttribute BookManageForm form, BindingResult result)
-            throws Throwable {
+    public ModelAndView updateOneBook(@PathVariable long id, @Validated @ModelAttribute BookManageForm form,
+            BindingResult result) throws Throwable {
         try {
+            validateInputFormData(form, result);
+
             service.updateBook(id, form);
         } catch (Exception e) {
             ModelAndView mav = handleException(form, e);
@@ -154,6 +161,20 @@ public class BookManageController {
             return handleException(t);
         }
         return new ModelAndView(REDIRECT_TO);
+    }
+
+    /**
+     * フォーム情報の入力内容が妥当か否かを検証する。<br />
+     * フォーム情報の入力内容に不備がある場合、Exceptionをthrowする。
+     *
+     * @param form フォーム情報
+     * @param result validationの結果
+     * @throws BookManageValidationException 入力内容にエラーがあった場合、発生する
+     */
+    private void validateInputFormData(BookManageForm form, BindingResult result) throws BookManageValidationException {
+        if (result.hasErrors()) {
+            throw new BookManageValidationException(result);
+        }
     }
 
     /**
@@ -190,6 +211,11 @@ public class BookManageController {
             String message = messageSource.getMessage("error.optlockfailure", null, null);
             log.warn(message, t);
             return toBookPageForError(form, message);
+        } else if (t instanceof BookManageValidationException) {
+            // 入力内容のエラーが発生した場合
+            String message = messageSource.getMessage("error.validation", null, null);
+            log.warn(message, t);
+            return toBookPageForError(form, message);
         }
 
         throw t;
@@ -208,7 +234,7 @@ public class BookManageController {
         BookManageForm initForm = service.initForm();
         form.setBooks(initForm.getBooks());
         ModelAndView modelAndView = toBookPages();
-        modelAndView.addObject("form", form);
+        modelAndView.addObject("bookManageForm", form);
         modelAndView.addObject("errorMessage", errorMessage);
         return modelAndView;
     }

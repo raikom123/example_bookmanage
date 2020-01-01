@@ -2,6 +2,9 @@ package com.example.bookmanage.form;
 
 import java.util.List;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
+
 import com.example.bookmanage.domain.Book;
 
 import lombok.AllArgsConstructor;
@@ -21,11 +24,15 @@ public class BookManageForm {
     /**
      * タイトル
      */
+    @NotBlank
+    @Size(max = 30, message="{validation.max-size}")
     private String title;
 
     /**
      * 著者
      */
+    @NotBlank
+    @Size(max = 20, message="{validation.max-size}")
     private String author;
 
     /**

@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import com.example.bookmanage.BookmanageApplication;
@@ -149,7 +150,7 @@ public class BookManageControllerTests {
                 .andReturn();
 
         // モデルからformを取得する
-        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
 
         // 変数を評価する
         assertNull(form.getTitle());
@@ -182,7 +183,7 @@ public class BookManageControllerTests {
                 .andReturn();
 
         // モデルからformを取得する
-        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
 
         // 変数を評価する
         assertNull(form.getTitle());
@@ -217,7 +218,7 @@ public class BookManageControllerTests {
                 .andReturn();
 
         // モデルからformを取得する
-        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
 
         // 変数を評価する
         assertEquals(form.getTitle(), TEST_TITLE);
@@ -257,7 +258,7 @@ public class BookManageControllerTests {
                 .andReturn();
 
         // モデルからformを取得する
-        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
 
         // 変数を評価する
         assertNull(form.getTitle());
@@ -295,6 +296,56 @@ public class BookManageControllerTests {
                 .andDo(print())
                 .andExpect(status().is3xxRedirection()) // HTTPステータスが3xxか否か(リダイレクト)
                 .andExpect(redirectedUrl("/books")); // /booksにリダイレクトするか否か
+    }
+
+    @Test
+    public void createOneBook_入力エラーが発生した場合のステータスとビューとモデルの確認() throws Exception {
+        // テストデータ作成
+        BookManageForm inputForm = BookManageForm.builder()
+                .newBook(true)
+                .version(0)
+                .build();
+        BookManageForm initForm = BookManageForm.builder()
+                .newBook(true)
+                .version(0)
+                .books(Arrays.asList())
+                .build();
+        String actualMessage = messageSource.getMessage("error.validation", null, null);
+
+        // モックを登録
+        when(service.initForm()).thenReturn(initForm);
+        when(mockMessageSource.getMessage("error.validation", null, null)).thenReturn(actualMessage);
+
+        // postリクエストでbooksを指定する
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("title", inputForm.getTitle());
+        params.add("author", inputForm.getAuthor());
+        params.add("newBook", String.valueOf(inputForm.isNewBook()));
+        params.add("version", String.valueOf(inputForm.getVersion()));
+        MvcResult result = mockMvc.perform(post("/books").params(params))
+                .andDo(print())
+                .andExpect(status().isOk()) // HTTPステータスが200か否か
+                .andExpect(view().name("books")) // ビュー名が"books"か否か
+                .andReturn();
+
+        // モデルからformを取得する
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
+
+        // 変数を評価する
+        assertNull(form.getTitle());
+        assertNull(form.getAuthor());
+        assertEquals(form.isNewBook(), true);
+        assertEquals(form.getVersion(), 0);
+        assertNotNull(form.getBooks());
+        assertEquals(form.getBooks().size(), 0);
+
+        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        String message = (String) result.getModelAndView().getModel().get("errorMessage");
+        assertEquals(message, actualMessage);
+
+        //MEMO bindingResultの詳細な確認は、BookManageFormTestsで行う
+        BindingResult bindingResult = (BindingResult) result.getModelAndView().getModel().get("org.springframework.validation.BindingResult.bookManageForm");
+        assertEquals(bindingResult.getErrorCount(), 2);
     }
 
     @Test
@@ -355,7 +406,7 @@ public class BookManageControllerTests {
                 .andReturn();
 
         // モデルからformを取得する
-        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
 
         // 変数を評価する
         assertEquals(form.getTitle(), inputForm.getTitle());
@@ -403,7 +454,7 @@ public class BookManageControllerTests {
                 .andReturn();
 
         // モデルからformを取得する
-        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
 
         // 変数を評価する
         assertEquals(form.getTitle(), inputForm.getTitle());
@@ -416,6 +467,57 @@ public class BookManageControllerTests {
         // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
         String message = (String) result.getModelAndView().getModel().get("errorMessage");
         assertEquals(message, actualMessage);
+    }
+
+    @Test
+    public void updateOneBook_入力エラーが発生する場合のステータスとビューとモデルの確認() throws Exception {
+        // テストデータ作成
+        BookManageForm inputForm = BookManageForm.builder()
+                .title("")
+                .author("")
+                .newBook(false)
+                .version(TEST_VERSION)
+                .build();
+        BookManageForm initForm = BookManageForm.builder()
+                .newBook(true)
+                .books(Arrays.asList(testBook))
+                .build();
+        String actualMessage = messageSource.getMessage("error.validation", null, null);
+
+        // モックを登録
+        when(service.initForm()).thenReturn(initForm);
+        when(mockMessageSource.getMessage("error.validation", null, null)).thenReturn(actualMessage);
+
+        // putリクエストでbooks/{id}を指定する
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("title", inputForm.getTitle());
+        params.add("author", inputForm.getAuthor());
+        params.add("newBook", String.valueOf(inputForm.isNewBook()));
+        params.add("version", String.valueOf(inputForm.getVersion()));
+        MvcResult result = mockMvc.perform(put("/books/1").params(params))
+                .andDo(print())
+                .andExpect(status().isOk()) // HTTPステータスが200か否か
+                .andExpect(view().name("books")) // ビュー名が"books"か否か
+                .andReturn();
+
+        // モデルからformを取得する
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
+
+        // 変数を評価する
+        assertEquals(form.getTitle(), inputForm.getTitle());
+        assertEquals(form.getAuthor(), inputForm.getAuthor());
+        assertEquals(form.isNewBook(), inputForm.isNewBook());
+        assertEquals(form.getVersion(), inputForm.getVersion());
+        assertNotNull(form.getBooks());
+        assertEquals(form.getBooks().size(), 1);
+
+        // モデルからメッセージを取得し、リソースファイルのメッセージと同じか評価する
+        String message = (String) result.getModelAndView().getModel().get("errorMessage");
+        assertEquals(message, actualMessage);
+
+        //MEMO bindingResultの詳細な確認は、BookManageFormTestsで行う
+        BindingResult bindingResult = (BindingResult) result.getModelAndView().getModel().get("org.springframework.validation.BindingResult.bookManageForm");
+        assertEquals(bindingResult.getErrorCount(), 2);
     }
 
     @Test
@@ -450,7 +552,7 @@ public class BookManageControllerTests {
                 .andReturn();
 
         // モデルからformを取得する
-        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("form");
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
 
         // 変数を評価する
         assertNull(form.getTitle());
