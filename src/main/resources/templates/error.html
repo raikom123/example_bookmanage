@@ -21,11 +21,12 @@
             <h3 class="text-muted" th:text="#{system.title}">書籍管理システム</h3>
         </div>
         <div class="jumbotron">
-            <h1 th:text="#{label.inputform}">登録フォーム</h1>
+            <h1 th:text="#{label.occureedError}">エラーが発生しました。</h1>
             <a type="button"
                class="btn btn-success"
                href="./books.html"
                th:href="@{/books}"
+               th:text="#{label.backToBookManageSystem}"
             >
             書籍管理システムに戻る
             </a>
