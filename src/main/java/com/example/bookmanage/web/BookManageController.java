@@ -60,6 +60,16 @@ public class BookManageController {
     }
 
     /**
+     * ルートURLにアクセスする。
+     * 
+     * @return "/books"へのリダイレクト
+     */
+    @GetMapping(value = "/")
+    public ModelAndView root() {
+        return new ModelAndView(REDIRECT_TO);
+    }
+
+    /**
      * 書籍一覧を読み込む。
      * 
      * @return モデルビュー
