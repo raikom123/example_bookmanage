@@ -582,4 +582,27 @@ public class BookManageControllerTests {
         assertEquals(messageCode.getValue(), "error.booknotfound");
     }
 
+    @Test
+    void ルートURLを指定した場合のステータスとビュー名の確認() throws Exception {
+        // getリクエストで"/"を指定する
+        mockMvc.perform(get("/"))
+                .andDo(print())
+                .andExpect(status().is3xxRedirection()) // HTTPステータスが3xxか否か(リダイレクト)
+                .andExpect(redirectedUrl("/books")); // /booksにリダイレクトするか否か
+    }
+
+    @Test
+    void idに文字を指定した場合のステータスとビュー名の確認() throws Exception {
+        // putリクエストでbooks/{id}を指定する
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("title", TEST_TITLE);
+        params.add("author", TEST_AUTHOR);
+        params.add("newBook", String.valueOf(false));
+        params.add("version", String.valueOf(0));
+        mockMvc.perform(put("/books/a").params(params))
+                .andDo(print())
+                .andExpect(status().isOk()) // HTTPステータスが200か否か
+                .andExpect(view().name("error")); // ビュー名がerrorか否か
+    }
+
 }
