@@ -83,24 +83,7 @@ class BookManageServiceTests {
     }
 
     @Test
-    void initForm_データが0件の場合() {
-        // モック
-        when(repository.findAll()).thenReturn(Arrays.asList());
-
-        // initFormの呼び出し
-        BookManageForm form = service.initForm();
-
-        // 変数を評価する
-        assertNull(form.getTitle());
-        assertNull(form.getAuthor());
-        assertEquals(form.isNewBook(), true);
-        assertEquals(form.getVersion(), 0);
-        assertNotNull(form.getBooks());
-        assertEquals(form.getBooks().size(), 0);
-    }
-
-    @Test
-    void initForm_データが1件の場合() {
+    void initForm_戻り値の変数とメソッドの呼び出しの確認() {
         // モック
         when(repository.findAll()).thenReturn(Arrays.asList(testBook));
 
@@ -121,10 +104,13 @@ class BookManageServiceTests {
         assertEquals(book.getAuthor(), TEST_AUTHOR);
         assertEquals(book.getId(), TEST_ID);
         assertEquals(book.getVersion(), TEST_VERSION);
+
+        // repositoryのメソッドの呼び出しを確認
+        verify(repository, times(1)).findAll();
     }
 
     @Test
-    void readOneBook_指定したIDのデータが取得できる場合() {
+    void readOneBook_戻り値とメソッドの呼び出しの確認() {
         // モック
         when(repository.findById(TEST_ID)).thenReturn(Optional.of(testBook));
         when(repository.findAll()).thenReturn(Arrays.asList(testBook));
@@ -140,6 +126,10 @@ class BookManageServiceTests {
             assertEquals(form.getVersion(), TEST_VERSION);
             assertNotNull(form.getBooks());
             assertEquals(form.getBooks().size(), 1);
+
+            // repositoryのメソッドの呼び出しを確認
+            verify(repository, times(1)).findAll();
+            verify(repository, times(1)).findById(TEST_ID);
         } catch (BookNotFoundException e) {
             // Exceptionが発生したらエラー
             fail();
@@ -147,7 +137,7 @@ class BookManageServiceTests {
     }
 
     @Test
-    void readOneBook_指定したIDのデータが取得できない場合() {
+    void readOneBook_指定したIDのデータが取得できない場合_例外が発生することの確認() {
         // モック
         when(repository.findById(TEST_ID)).thenReturn(Optional.ofNullable(null));
         when(repository.findAll()).thenReturn(Arrays.asList());
@@ -162,7 +152,7 @@ class BookManageServiceTests {
     }
 
     @Test
-    void updateBook_指定したIDでデータが取得できる場合() {
+    void updateBook_戻り値と保存処理の呼び出しの確認() {
         // モック
         when(repository.findById(TEST_ID)).thenReturn(Optional.of(testBook));
         when(repository.save(testBook)).thenReturn(testBook);
@@ -190,7 +180,7 @@ class BookManageServiceTests {
     }
 
     @Test
-    void updateBook_指定したIDでデータが取得できるがフォーム情報のバージョンと異なる場合() {
+    void updateBook_DBのバージョンと異なるバージョンを指定した場合_例外が発生することの確認() {
         // モック
         when(repository.findById(TEST_ID)).thenReturn(Optional.of(testBook));
 
@@ -216,7 +206,7 @@ class BookManageServiceTests {
     }
 
     @Test
-    void updateBook_指定したIDでデータが取得できない場合() {
+    void updateBook_指定したIDでデータが取得できない場合_例外が発生することの確認() {
         // モック
         when(repository.findById(TEST_ID)).thenReturn(Optional.ofNullable(null));
 
@@ -259,7 +249,7 @@ class BookManageServiceTests {
     }
 
     @Test
-    void deleteBook_指定したIDのデータが存在する場合() {
+    void deleteBook_削除処理の呼び出しの確認() {
         // モック
         when(repository.existsById(TEST_ID)).thenReturn(true);
 
@@ -276,7 +266,7 @@ class BookManageServiceTests {
     }
 
     @Test
-    void deleteBook_指定したIDのデータが存在しない場合() {
+    void deleteBook_指定したIDのデータが存在しない場合_例外が発生することの確認() {
         // モック
         when(repository.existsById(TEST_ID)).thenReturn(false);
 
