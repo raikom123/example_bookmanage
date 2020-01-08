@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import com.example.bookmanage.domain.Book;
 
@@ -52,10 +53,22 @@ class BookRepositoryTests {
     @Autowired
     private BookRepository repository;
 
+    /**
+     * 新規登録した書籍のエンティティ
+     */
+    private static Book newBook;
+
     @Test
+    @WithMockUser(username = "user")
     void 新規登録時にエンティティに設定した変数と自動設定される変数が設定されることの確認() {
+        // テストデータ生成
+        Book book = Book.builder()
+                .title(TEST_TITLE_NEW)
+                .author(TEST_AUTHOR_NEW)
+                .build();
+
         // 書籍を新規登録
-        Book newBook = insertBook();
+        newBook = repository.saveAndFlush(book);
 
         // エンティティに設定した変数を検証
         assertEquals(newBook.getTitle(), TEST_TITLE_NEW);
@@ -65,13 +78,14 @@ class BookRepositoryTests {
         assertEquals(newBook.getVersion(), FIRST_VERSION);
         assertNotNull(newBook.getCreatedDateTime());
         assertNotNull(newBook.getUpdatedDateTime());
+        assertNotNull(newBook.getCreatedUser());
+        assertNotNull(newBook.getUpdatedUser());
     }
 
     @Test
+    @WithMockUser(username = "admin")
     void 更新時にエンティティに設定した変数と自動設定される変数が更新されることの確認() {
-        // 書籍を新規登録
-        Book newBook = insertBook();
-
+        //MEMO 処理の順番によりエラーが発生するため、注意が必要
         // 書籍の内容を更新
         Book book = new ModelMapper().map(newBook, Book.class);
         book.setTitle(TEST_TITLE_UPD);
@@ -86,22 +100,8 @@ class BookRepositoryTests {
         assertNotEquals(updBook.getVersion(), newBook.getVersion());
         assertEquals(updBook.getCreatedDateTime(), newBook.getCreatedDateTime());
         assertNotEquals(updBook.getUpdatedDateTime(), newBook.getUpdatedDateTime());
-    }
-
-    /**
-     * 書籍を新規登録する
-     * 
-     * @return 書籍
-     */
-    private Book insertBook() {
-        // テストデータ生成
-        Book book = Book.builder()
-                .title(TEST_TITLE_NEW)
-                .author(TEST_AUTHOR_NEW)
-                .build();
-
-        // DBに新規登録
-        return repository.saveAndFlush(book);
+        assertEquals(updBook.getCreatedUser(), newBook.getCreatedUser());
+        assertNotEquals(updBook.getUpdatedUser(), newBook.getUpdatedUser());
     }
 
 }
