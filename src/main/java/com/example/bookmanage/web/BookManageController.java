@@ -1,8 +1,11 @@
 package com.example.bookmanage.web;
 
+import java.security.Principal;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -29,6 +32,11 @@ import lombok.extern.slf4j.Slf4j;
 public class BookManageController {
 
     /**
+     * ログイン画面のビュー名
+     */
+    private static final String LOGIN = "login";
+
+    /**
      * 書籍管理システムのビュー名
      */
     private static final String BOOKS = "books";
@@ -36,7 +44,7 @@ public class BookManageController {
     /**
      * リダイレクトのURL
      */
-    private static final String REDIRECT_TO = "redirect:/" + BOOKS;
+    private static final String REDIRECT_TO_BOOKS = "redirect:/" + BOOKS;
 
     /**
      * 書籍管理システムのサービス
@@ -66,8 +74,55 @@ public class BookManageController {
      */
     @GetMapping(value = "/")
     public ModelAndView root() {
-        return new ModelAndView(REDIRECT_TO);
+        return new ModelAndView(REDIRECT_TO_BOOKS);
     }
+
+    // ------------------------------------------------------------------------
+    // ログイン処理
+    // ------------------------------------------------------------------------
+
+    /**
+     * ログイン画面にアクセスする。
+     * 
+     * @return モデルビュー
+     */
+    @GetMapping(value = "/login")
+    public ModelAndView login(Principal principal) {
+        //TODO セッションがあれば、booksにリダイレクト
+        return new ModelAndView(LOGIN);
+    }
+
+    /**
+     * ログインに失敗した時の処理。
+     * 
+     * @return モデルビュー
+     */
+    @GetMapping(value = "/loginfailure")
+    public ModelAndView loginfailure() {
+        ModelAndView modelAndView = new ModelAndView(LOGIN);
+        modelAndView.addObject("loginFailure", true);
+        return modelAndView;
+    }
+
+    // ------------------------------------------------------------------------
+    // ログアウト処理
+    // ------------------------------------------------------------------------
+
+    /**
+     * ログアウトが成功した時の処理。
+     *
+     * @return モデルビュー
+     */
+    @GetMapping(value = "/logoutsuccess")
+    public ModelAndView logoutSuccess() {
+        ModelAndView modelAndView = new ModelAndView(LOGIN);
+        modelAndView.addObject("logout", true);
+        return modelAndView;
+    }
+
+    // ------------------------------------------------------------------------
+    // 書籍管理機能処理
+    // ------------------------------------------------------------------------
 
     /**
      * 書籍一覧を読み込む。
@@ -75,10 +130,15 @@ public class BookManageController {
      * @return モデルビュー
      */
     @GetMapping(value = "/books")
-    public ModelAndView readBooks() {
+    public ModelAndView readBooks(Principal principal) {
+        // 認証情報を取得
+        Authentication authentication = (Authentication) principal;
+        String userName = authentication.getName();
+
         BookManageForm form = service.initForm();
         ModelAndView modelAndView = toBookPages();
         modelAndView.addObject("bookManageForm", form);
+        modelAndView.addObject("userName", userName);
         return modelAndView;
     }
 
@@ -129,7 +189,7 @@ public class BookManageController {
         } catch (Throwable t) {
             return handleException(form, t);
         }
-        return new ModelAndView(REDIRECT_TO);
+        return new ModelAndView(REDIRECT_TO_BOOKS);
     }
 
     /**
@@ -153,7 +213,7 @@ public class BookManageController {
             mav.addObject("bookId", id);
             return mav;
         }
-        return new ModelAndView(REDIRECT_TO);
+        return new ModelAndView(REDIRECT_TO_BOOKS);
     }
 
     /**
@@ -170,7 +230,40 @@ public class BookManageController {
         } catch (Throwable t) {
             return handleException(t);
         }
-        return new ModelAndView(REDIRECT_TO);
+        return new ModelAndView(REDIRECT_TO_BOOKS);
+    }
+
+    // ------------------------------------------------------------------------
+    // 管理者用処理
+    // ------------------------------------------------------------------------
+
+    /**
+     * 管理者用画面へのアクセスした時の処理。
+     *
+     * @param principal 認証情報
+     * @return モデルビュー
+     */
+    @GetMapping("/admin")
+    public ModelAndView admin(Principal principal) {
+        ModelAndView modelAndView = readBooks(principal);
+        modelAndView.setViewName("admin");
+        return modelAndView;
+    }
+
+    // ------------------------------------------------------------------------
+    // エラー処理
+    // ------------------------------------------------------------------------
+
+    /**
+     * セッションが無効になった時の処理。
+     *
+     * @return モデルビュー
+     */
+    @GetMapping("/invalidsession")
+    public ModelAndView invalidSession() {
+        ModelAndView modelAndView = new ModelAndView(LOGIN);
+        modelAndView.addObject("sessionInvalid", true);
+        return modelAndView;
     }
 
     /**
