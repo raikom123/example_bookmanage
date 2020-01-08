@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.MessageSource;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -147,9 +148,13 @@ public class BookManageControllerTests {
                 .books(Arrays.asList())
                 .build();
         when(service.initForm()).thenReturn(initForm);
+        // 認証情報のモック
+        Authentication mockPrincipal = mock(Authentication.class);
+        when(mockPrincipal.getName()).thenReturn("user");
 
         // getリクエストでbooksを指定する
-        MvcResult result = this.mockMvc.perform(get("/books")).andDo(print())
+        MvcResult result = this.mockMvc.perform(get("/books").principal(mockPrincipal))
+                .andDo(print())
                 .andExpect(status().isOk()) // HTTPステータスが200か否か
                 .andExpect(view().name("books")) // ビュー名が"books"か否か
                 .andReturn();
@@ -180,9 +185,13 @@ public class BookManageControllerTests {
                 .books(Arrays.asList(testBook))
                 .build();
         when(service.initForm()).thenReturn(initForm);
+        // 認証情報のモック
+        Authentication mockPrincipal = mock(Authentication.class);
+        when(mockPrincipal.getName()).thenReturn("user");
 
         // getリクエストでbooksを指定する
-        MvcResult result = this.mockMvc.perform(get("/books")).andDo(print())
+        MvcResult result = this.mockMvc.perform(get("/books").principal(mockPrincipal))
+                .andDo(print())
                 .andExpect(status().isOk()) // HTTPステータスが200か否か
                 .andExpect(view().name("books")) // ビュー名が"books"か否か
                 .andReturn();
