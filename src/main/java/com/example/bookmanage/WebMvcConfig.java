@@ -19,7 +19,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * validationで使用するメッセージプロパティのエンコードをUTF-8に設定する。
  */
 @Configuration
-public class BookManageConfig implements WebMvcConfigurer {
+public class WebMvcConfig implements WebMvcConfigurer {
 
     /**
      * HiddenHttpMehotdFilterをFilterに設定するためのBeanを返却する。

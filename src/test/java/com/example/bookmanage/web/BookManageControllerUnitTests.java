@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.MessageSource;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -32,10 +33,10 @@ import com.example.bookmanage.form.BookManageForm;
 import com.example.bookmanage.service.BookManageService;
 
 /**
- * BookManageControllerのテストプログラム
+ * BookManageControllerの単体テストプログラム
  */
 @SpringBootTest(classes = BookmanageApplication.class)
-public class BookManageControllerTests {
+public class BookManageControllerUnitTests {
 
     /**
      * テストデータのID
@@ -147,9 +148,13 @@ public class BookManageControllerTests {
                 .books(Arrays.asList())
                 .build();
         when(service.initForm()).thenReturn(initForm);
+        // 認証情報のモック
+        Authentication mockPrincipal = mock(Authentication.class);
+        when(mockPrincipal.getName()).thenReturn("user");
 
         // getリクエストでbooksを指定する
-        MvcResult result = this.mockMvc.perform(get("/books")).andDo(print())
+        MvcResult result = this.mockMvc.perform(get("/books").principal(mockPrincipal))
+                .andDo(print())
                 .andExpect(status().isOk()) // HTTPステータスが200か否か
                 .andExpect(view().name("books")) // ビュー名が"books"か否か
                 .andReturn();
@@ -180,9 +185,13 @@ public class BookManageControllerTests {
                 .books(Arrays.asList(testBook))
                 .build();
         when(service.initForm()).thenReturn(initForm);
+        // 認証情報のモック
+        Authentication mockPrincipal = mock(Authentication.class);
+        when(mockPrincipal.getName()).thenReturn("user");
 
         // getリクエストでbooksを指定する
-        MvcResult result = this.mockMvc.perform(get("/books")).andDo(print())
+        MvcResult result = this.mockMvc.perform(get("/books").principal(mockPrincipal))
+                .andDo(print())
                 .andExpect(status().isOk()) // HTTPステータスが200か否か
                 .andExpect(view().name("books")) // ビュー名が"books"か否か
                 .andReturn();
@@ -603,6 +612,76 @@ public class BookManageControllerTests {
                 .andDo(print())
                 .andExpect(status().isOk()) // HTTPステータスが200か否か
                 .andExpect(view().name("error")); // ビュー名がerrorか否か
+    }
+
+    @Test
+    void login_ログイン画面にアクセスした場合のステータスとビュー名とモデルの確認() throws Exception {
+        mockMvc.perform(get("/login"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(view().name("login"))
+                .andExpect(model().attributeDoesNotExist("loginFailure", "logout", "sessionInvalid"));
+    }
+
+    @Test
+    void loginfailure_ログイン失敗時のステータスとビュー名とモデルの確認() throws Exception {
+        mockMvc.perform(get("/loginfailure"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(view().name("login"))
+                .andExpect(model().attribute("loginFailure", true))
+                .andExpect(model().attributeDoesNotExist("logout", "sessionInvalid"));
+    }
+
+    @Test
+    void invalidsession_セッションが無効になった場合のステータスとビュー名とモデルの確認() throws Exception {
+        mockMvc.perform(get("/invalidsession"))
+                 .andDo(print())
+                 .andExpect(status().isOk())
+                 .andExpect(view().name("login"))
+                 .andExpect(model().attribute("sessionInvalid", true))
+                 .andExpect(model().attributeDoesNotExist("logout", "loginFailure"));
+    }
+
+    @Test
+    void logoutsuccess_ログアウトに成功した場合のステータスとビュー名とモデルの確認() throws Exception {
+        mockMvc.perform(get("/logoutsuccess"))
+                 .andDo(print())
+                 .andExpect(status().isOk())
+                 .andExpect(view().name("login"))
+                 .andExpect(model().attribute("logout", true))
+                 .andExpect(model().attributeDoesNotExist("sessionInvalid", "loginFailure"));
+    }
+
+    @Test
+    void admin_管理者機能にアクセスした場合のステータスとビュー名とモデルの確認() throws Exception {
+        // モックを登録
+        BookManageForm initForm = BookManageForm.builder()
+                .newBook(true)
+                .books(Arrays.asList(testBook))
+                .build();
+        when(service.initForm()).thenReturn(initForm);
+        // 認証情報のモック
+        Authentication mockPrincipal = mock(Authentication.class);
+        when(mockPrincipal.getName()).thenReturn("user");
+
+        // getリクエストでbooksを指定する
+        MvcResult result = this.mockMvc.perform(get("/admin").principal(mockPrincipal))
+                .andDo(print())
+                .andExpect(status().isOk()) // HTTPステータスが200か否か
+                .andExpect(view().name("admin")) // ビュー名が"books"か否か
+                .andReturn();
+
+        // モデルからformを取得する
+        BookManageForm form = (BookManageForm) result.getModelAndView().getModel().get("bookManageForm");
+
+        // 変数を評価する
+        assertNull(form.getTitle());
+        assertNull(form.getAuthor());
+        assertEquals(form.isNewBook(), true);
+        assertEquals(form.getVersion(), 0);
+        assertNotNull(form.getBooks());
+        assertEquals(form.getBooks().size(), 1);
     }
 
 }

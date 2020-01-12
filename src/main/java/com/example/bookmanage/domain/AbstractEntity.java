@@ -8,6 +8,9 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Version;
 
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,10 +25,22 @@ import lombok.Setter;
 public abstract class AbstractEntity {
 
     /**
+     * 作成ユーザ
+     */
+    @Column(name = "created_user")
+    private String createdUser;
+
+    /**
      * 作成日時
      */
     @Column(name = "created_date_time")
     private LocalDateTime createdDateTime;
+
+    /**
+     * 更新ユーザ
+     */
+    @Column(name = "updated_user")
+    private String updatedUser;
 
     /**
      * 更新日時
@@ -47,6 +62,11 @@ public abstract class AbstractEntity {
         LocalDateTime datetime = LocalDateTime.now();
         createdDateTime = datetime;
         updatedDateTime = datetime;
+
+        SecurityContext context = SecurityContextHolder.getContext();
+        String userName = context.getAuthentication().getName();
+        createdUser = userName;
+        updatedUser = userName;
     }
 
     /**
@@ -55,6 +75,9 @@ public abstract class AbstractEntity {
     @PreUpdate
     public void preUpdate() {
         updatedDateTime = LocalDateTime.now();
+
+        SecurityContext context = SecurityContextHolder.getContext();
+        updatedUser = context.getAuthentication().getName();
     }
 
 }

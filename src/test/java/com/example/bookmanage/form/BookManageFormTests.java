@@ -2,21 +2,29 @@ package com.example.bookmanage.form;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.example.bookmanage.WebMvcConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Validator;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 /**
  * 書籍管理システムのフォーム情報のテストプログラム
  */
-@SpringBootTest
+@ExtendWith(SpringExtension.class)
+@WebAppConfiguration
+@EnableWebMvc
+@ContextConfiguration(classes = WebMvcConfig.class)
 class BookManageFormTests {
 
     /**
