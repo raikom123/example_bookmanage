@@ -117,6 +117,7 @@ class BookManageFormTests {
         assertEquals(result.getFieldError().getDefaultMessage(), actualMessage);
     }
 
+    @Test
     void タイトルの文字数が最大を超えている場合_エラーが発生することの確認() {
         // 想定されるメッセージをリソースから取得する
         String actualMessage = messageSource.getMessage("validation.max-size", null, null);
@@ -144,6 +145,7 @@ class BookManageFormTests {
         assertEquals(result.getFieldError().getDefaultMessage(), actualMessage);
     }
 
+    @Test
     void 著者の文字数が最大を超えている場合_エラーが発生することの確認() {
         // 想定されるメッセージをリソースから取得する
         String actualMessage = messageSource.getMessage("validation.max-size", null, null);
